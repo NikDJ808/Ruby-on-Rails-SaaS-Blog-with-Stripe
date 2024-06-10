@@ -1,108 +1,134 @@
-# [App demo](https://saasblog.herokuapp.com/)
+# SaaSBlog
 
-****
+## Table of Contents
 
-credentials
-```
-stripe:
-  secret: sk_test_
-  public: pk_test_
-  webhook: whsec_
-```
-create stripe product
-```
-Stripe::Product.create(name: 'starter')
-```
-create stripe price
-```
-Stripe::Price.create(
-  product: 'prod_xxx',
-  unit_amount: 500,
-  currency: 'usd',
-  recurring: {
-    interval: 'month'
-  },
-  lookup_key: 'starter',
-)
-```
-add to button links for impression of faster loading
-```
-, data: { disable_with: "Connecting..." }
-```
-sort prices by amount
-```
-def pricing
-  @prices = Stripe::Price.list().data.sort_by {|p| p.unit_amount}
-end
-```  
-option to find price by lookup_key - checkout_controller
-```
-price = Stripe::Price.list(lookup_keys: [params[:plan]]).data.first
-```
-option to find price by lookup_key - view
-```
-<%= button_to checkout_create_path(plan: price.lookup_key), remote: true, data: { disable_with: "Connecting..." } do %>
-```
-styling post views
-```
-<td><%= truncate(post.content, length: 17) %></td>
-<%= simple_format(@post.content) %>
-```
-## webhooks
-routes
-```
-resources :webhooks, only: [:create]
-```
-webhooks_controller.rb
-```
-class WebhooksController < ApplicationController
-  skip_before_action :authenticate_user!
-  skip_before_action :verify_authenticity_token
+- [Introduction](#introduction)
+- [Features](#features)
+- [Technologies Used](#technologies-used)
+- [Setup and Installation](#setup-and-installation)
+- [Usage](#usage)
+- [Folder Structure](#folder-structure)
 
-  def create
-    payload = request.body.read
-    sig_header = request.env['HTTP_STRIPE_SIGNATURE']
-    event = nil
+## Introduction
 
-    begin
-      event = Stripe::Webhook.construct_event(
-        payload, sig_header, Rails.application.credentials.dig(:stripe, :webhook)
-      )
-    rescue JSON::ParserError => e
-      status 400
-      return
-    rescue Stripe::SignatureVerificationError => e
-      # Invalid signature
-      puts "Signature error"
-      p e
-      return
-    end
+SaaSBlog is a Software-as-a-Service (SaaS) blogging platform built with Ruby on Rails. It provides a comprehensive solution for creating and managing a blog, with subscription-based access to premium content using Stripe for payment processing. This project aims to demonstrate a complete SaaS application with user authentication, content management, and payment integration.
 
-    # Handle the event
-    case event.type
-    when 'checkout.session.completed'
-      session = event.data.object
-      @user = User.find_by(stripe_customer_id: session.customer)
-      @user.update(subscription_status: 'active')
-    when 'customer.subscription.updated', 'customer.subscription.deleted'
-      subscription = event.data.object
-      @user = User.find_by(stripe_customer_id: subscription.customer)
-      @user.update(
-        subscription_status: subscription.status,
-        plan: subscription.items.data[0].price.lookup_key,
-      )
-    end
+## Features
 
-    render json: { message: 'success' }
-  end
-end
+- User authentication with Devise
+- Subscription management with Stripe
+- Blog post creation and management
+- Static pages for general information
+- Responsive design
+
+## Technologies Used
+
+- **Ruby on Rails**: The web application framework used for development.
+- **PostgreSQL**: Database management system.
+- **Devise**: Authentication solution for Rails.
+- **Stripe**: Payment processing.
+- **Webpacker**: For managing JavaScript assets.
+- **Bootstrap**: For responsive design and styling.
+- **RSpec**: For testing the application.
+
+## Setup and Installation
+
+### Prerequisites
+
+Ensure you have the following installed on your local development environment:
+
+- Ruby 3.0.0 or newer
+- Rails 6.0.0 or newer
+- PostgreSQL
+- Node.js
+- Yarn
+
+### Installation Steps
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/yourusername/saasblog.git
+   cd saasblog
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   bundle install
+   yarn install
+   ```
+
+3. **Setup the database:**
+
+   ```bash
+   rails db:create
+   rails db:migrate
+   rails db:seed
+   ```
+
+4. **Set up Stripe:**
+
+   - Add your Stripe API keys to your environment variables or a credentials file.
+
+5. **Start the Rails server:**
+
+   ```bash
+   rails server
+   ```
+
+6. **Visit the application:**
+
+   Open your web browser and go to `http://localhost:3000`.
+
+## Usage
+
+Once the application is up and running, you can:
+
+- Sign up for a new account.
+- Create and manage blog posts.
+- Subscribe to premium content.
+- View and edit your subscription settings through the billing portal.
+
+## Folder Structure
+
+Here is an overview of the main directories and files in the project:
+
 ```
-## stripe CLI
-[https://stripe.com/docs/stripe-cli](https://stripe.com/docs/stripe-cli)
-```
-stripe listen
-stripe logs tail 
-stripe trigger payment_intent.succeeded
-stripe customers create
-stripe listen --forward-to localhost:3000/webhooks
+saasblog/
+├── app/
+│   ├── assets/
+│   │   ├── config/
+│   │   ├── images/
+│   │   └── stylesheets/
+│   ├── channels/
+│   ├── controllers/
+│   ├── helpers/
+│   ├── javascript/
+│   ├── jobs/
+│   ├── mailers/
+│   ├── models/
+│   ├── views/
+│   └── channels/
+├── bin/
+├── config/
+│   ├── environments/
+│   ├── initializers/
+│   ├── locales/
+│   └── application.rb
+├── db/
+│   ├── migrate/
+│   ├── schema.rb
+│   └── seeds.rb
+├── lib/
+├── log/
+├── public/
+├── test/
+├── tmp/
+├── vendor/
+├── Gemfile
+├── Gemfile.lock
+├── Rakefile
+├── config.ru
+└── README.md
 ```
